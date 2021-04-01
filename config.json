@@ -1,0 +1,20 @@
+{
+    "resourceList":[
+        {
+            "name":"Google",
+            "host":"www.google.com",
+            "ports":["443","80"]
+        },
+        {
+            "name":"Yandex",
+            "host":"www.yandex.com",
+            "ports":["443"]
+        },
+        {
+            "name":"for testing",
+            "host":"www.213y4y.com",
+            "ports":["443","80"]
+        }
+    ],
+    "metricsPort":"2112"
+}
