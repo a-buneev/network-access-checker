@@ -23,11 +23,10 @@ func NewChecker(config *models.Config, ticker *time.Ticker) *Checker {
 func (checker *Checker) Run() {
 	gaugeOpts := promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace:   "monitoring",
-			Subsystem:   "network",
-			Name:        "network_access_checker",
-			Help:        "Check network access to resources",
-			ConstLabels: prometheus.Labels{"nodeName": "Name", "nodeAddr": "Address"},
+			Namespace: "monitoring",
+			Subsystem: "network",
+			Name:      "network_access_checker",
+			Help:      "Check network access to resources",
 		},
 		[]string{"resourceName", "resourceAddr"},
 	)

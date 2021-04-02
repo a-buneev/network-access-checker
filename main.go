@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"time"
@@ -11,7 +12,11 @@ import (
 )
 
 func main() {
-	conf := models.NewConfig("config.json")
+	var configPath string
+	flag.StringVar(&configPath, "config.filepath", "config.json", "Path to the config file")
+	flag.Parse()
+
+	conf := models.NewConfig(configPath)
 	resourceChecker := checker.NewChecker(conf, time.NewTicker(10*time.Second))
 	go resourceChecker.Run()
 	http.Handle("/metrics", promhttp.Handler())
