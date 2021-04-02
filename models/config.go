@@ -6,8 +6,10 @@ import (
 )
 
 type Config struct {
-	ResourceList []Resource `json:"resourceList"`
-	MetricsPort  string     `json:"metricsPort"`
+	ResourceList           []Resource `json:"resourceList"`
+	MetricsPort            string     `json:"metricsPort"`
+	CheckPeriodSeconds     int        `json:"checkPeriodSeconds"`
+	CheckConnectionTimeout int        `json:"checkConnectionTimeout"`
 }
 
 func NewConfig(path string) *Config {

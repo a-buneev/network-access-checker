@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/buneyev/network-access-checker/checker"
 	"github.com/buneyev/network-access-checker/models"
@@ -17,7 +16,7 @@ func main() {
 	flag.Parse()
 
 	conf := models.NewConfig(configPath)
-	resourceChecker := checker.NewChecker(conf, time.NewTicker(10*time.Second))
+	resourceChecker := checker.NewChecker(conf)
 	go resourceChecker.Run()
 	http.Handle("/metrics", promhttp.Handler())
 	fmt.Println("ListenAndServe on " + conf.MetricsPort)

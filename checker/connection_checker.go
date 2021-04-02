@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-func checkConnection(host string, ports []string) error {
+func checkConnection(host string, ports []string, timeout time.Duration) error {
 	for _, port := range ports {
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), 3*time.Second)
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
 		if err != nil {
 			log.Printf("Connecting error: %v, host: %v, port: %v", err.Error(), host, port)
 			return err

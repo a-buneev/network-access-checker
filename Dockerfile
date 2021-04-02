@@ -9,7 +9,7 @@ RUN addgroup -g 2000 app && \
     adduser -u 2000 -G app -D app && \
     apk --no-cache add ca-certificates && \
     apk --no-cache add bash && \
-    apk --no-cache add busybox-extrast && \
+    apk --no-cache add busybox-extras && \
     apk --no-cache add curl
 WORKDIR /app/
 COPY --chown=app:app --from=builder /go/src/github.com/buneyev/network-access-checker/app/network-access-checker .

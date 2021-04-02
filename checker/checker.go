@@ -11,12 +11,14 @@ import (
 type Checker struct {
 	ResourceList []models.Resource
 	Ticker       *time.Ticker
+	Timeout      time.Duration
 }
 
-func NewChecker(config *models.Config, ticker *time.Ticker) *Checker {
+func NewChecker(config *models.Config) *Checker {
 	return &Checker{
 		ResourceList: config.ResourceList,
-		Ticker:       ticker,
+		Ticker:       time.NewTicker(time.Duration(config.CheckPeriodSeconds) * time.Second),
+		Timeout:      time.Duration(config.CheckConnectionTimeout * int(time.Second)),
 	}
 }
 
@@ -25,7 +27,7 @@ func (checker *Checker) Run() {
 		prometheus.GaugeOpts{
 			Namespace: "monitoring",
 			Subsystem: "network",
-			Name:      "network_access_checker",
+			Name:      "access_checker",
 			Help:      "Check network access to resources",
 		},
 		[]string{"resourceName", "resourceAddr"},
@@ -37,7 +39,7 @@ func (checker *Checker) Run() {
 			return
 		case <-checker.Ticker.C:
 			for _, resource := range checker.ResourceList {
-				if err := checkConnection(resource.Host, resource.Ports); err != nil {
+				if err := checkConnection(resource.Host, resource.Ports, checker.Timeout); err != nil {
 					gaugeOpts.WithLabelValues(resource.Name, resource.Host).Set(0)
 				} else {
 					gaugeOpts.WithLabelValues(resource.Name, resource.Host).Set(1)

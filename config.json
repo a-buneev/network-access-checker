@@ -16,5 +16,7 @@
             "ports":["443","80"]
         }
     ],
-    "metricsPort":"2112"
+    "metricsPort":"2112",
+    "checkPeriodSeconds":3,
+    "checkConnectionTimeout":2
 }
