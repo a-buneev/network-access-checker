@@ -28,13 +28,13 @@ func TestMain(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
-	if !strings.Contains(rr.Body.String(), "monitoring_network_network_access_checker{resourceAddr=\"www.213y4y.com\",resourceName=\"for testing\"} 0") {
+	if !strings.Contains(rr.Body.String(), "monitoring_network_access_status{resource_addr=\"www.213y4y.com\",resource_name=\"for testing\"} 0") {
 		t.Errorf("handler returned unexpected body: www.213y4y.com not found")
 	}
-	if !strings.Contains(rr.Body.String(), "monitoring_network_network_access_checker{resourceAddr=\"www.google.com\",resourceName=\"Google\"} 1") {
+	if !strings.Contains(rr.Body.String(), "monitoring_network_access_status{resource_addr=\"www.google.com\",resource_name=\"Google\"} 1") {
 		t.Errorf("handler returned unexpected body: www.google.com not found")
 	}
-	if !strings.Contains(rr.Body.String(), "monitoring_network_network_access_checker{resourceAddr=\"www.yandex.com\",resourceName=\"Yandex\"} 1") {
+	if !strings.Contains(rr.Body.String(), "monitoring_network_access_status{resource_addr=\"www.yandex.com\",resource_name=\"Yandex\"} 1") {
 		t.Errorf("handler returned unexpected body: www.yandex.com not found")
 	}
 }
