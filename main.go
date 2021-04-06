@@ -13,27 +13,40 @@ import (
 
 	"github.com/buneyev/network-access-checker/checker"
 	"github.com/buneyev/network-access-checker/models"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/buneyev/network-access-checker/server"
 )
 
 func main() {
-	var configPath string
+	var (
+		configPath                    string
+		autoReloadConfig              bool
+		autoReloadConfigPeriodSeconds int
+		serverPort                    string
+	)
+
 	flag.StringVar(&configPath, "config.filepath", "config.json", "Path to the config file")
+	flag.BoolVar(&autoReloadConfig, "config.autoreload", false, "Autoreload config file")
+	flag.IntVar(&autoReloadConfigPeriodSeconds, "config.autoreloadperiod", 4, "Period of autoreload config file")
+	flag.StringVar(&serverPort, "server.port", "2112", "Port for ListenAndServe")
 	flag.Parse()
 
 	conf := models.NewConfig(configPath)
 	resourceChecker := checker.NewChecker(conf)
 	go resourceChecker.Run()
 
-	server := newMetricsServer(conf)
-	fmt.Println("ListenAndServe on " + conf.MetricsPort)
-	go server.ListenAndServe()
+	if autoReloadConfig {
+		go conf.Reload(autoReloadConfigPeriodSeconds)
+	}
 
-	gracefulShutdown(resourceChecker, server)
+	srv := server.NewMetricsServer(serverPort)
+	fmt.Println("ListenAndServe on :" + serverPort)
+	go srv.ListenAndServe()
+
+	gracefulShutdown(resourceChecker, srv)
 	fmt.Println("Success end")
 }
 
-func gracefulShutdown(checker *checker.Checker, server *http.Server) {
+func gracefulShutdown(checker *checker.Checker, srv *http.Server) {
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, os.Interrupt)
 	signal.Notify(sigint, syscall.SIGTERM)
@@ -45,17 +58,8 @@ func gracefulShutdown(checker *checker.Checker, server *http.Server) {
 		cancel()
 	}()
 
-	if err := server.Shutdown(ctxShutDown); err != nil {
+	if err := srv.Shutdown(ctxShutDown); err != nil {
 		log.Fatalf("server Shutdown Failed:%+s", err)
 	}
 	fmt.Println("Checker stoped")
-}
-
-func newMetricsServer(conf *models.Config) *http.Server {
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
-	return &http.Server{
-		Addr:    ":" + conf.MetricsPort,
-		Handler: mux,
-	}
 }

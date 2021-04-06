@@ -17,6 +17,8 @@ type Checker struct {
 	Timeout     time.Duration
 	ctx         context.Context
 	cancel      context.CancelFunc
+	gaugeOpts   *prometheus.GaugeVec
+	reqDuration *prometheus.HistogramVec
 }
 
 func NewChecker(config *models.Config) *Checker {
@@ -28,44 +30,44 @@ func NewChecker(config *models.Config) *Checker {
 		Timeout:     time.Duration(config.CheckConnectionTimeout * int(time.Second)),
 		ctx:         ctx,
 		cancel:      cancel,
+		gaugeOpts: promauto.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: "monitoring",
+				Subsystem: "network",
+				Name:      "access_status",
+				Help:      "Check network access to resources",
+			}, []string{"resource_name", "resource_addr", "resource_port"}),
+		reqDuration: promauto.NewHistogramVec(prometheus.HistogramOpts{
+			Namespace: "monitoring",
+			Subsystem: "network",
+			Name:      "req_duration",
+			Help:      "Duration of requests",
+		}, []string{"resource_name", "resource_addr", "resource_port"}),
 	}
 }
 
-func (checker *Checker) Run() {
-	gaugeOpts := promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "monitoring",
-			Subsystem: "network",
-			Name:      "access_status",
-			Help:      "Check network access to resources",
-		},
-		[]string{"resource_name", "resource_addr"},
-	)
+func (chckr *Checker) Run() {
 	var wg sync.WaitGroup
-	for _, resource := range checker.ResourceList {
+	for _, resource := range chckr.ResourceList {
 		wg.Add(1)
-		go checker.worker(resource, gaugeOpts, &wg)
+		go chckr.worker(resource, &wg)
 	}
 	wg.Wait()
 }
 
-func (checker *Checker) Stop() {
-	checker.cancel()
+func (chckr *Checker) Stop() {
+	chckr.cancel()
 }
 
-func (checker *Checker) worker(resource models.Resource, gaugeOpts *prometheus.GaugeVec, wg *sync.WaitGroup) {
-	ticker := time.NewTicker(checker.CheckPeriod)
+func (chckr *Checker) worker(resource models.Resource, wg *sync.WaitGroup) {
+	ticker := time.NewTicker(chckr.CheckPeriod)
 	for {
 		select {
-		case <-checker.ctx.Done():
+		case <-chckr.ctx.Done():
 			wg.Done()
 			return
 		case <-ticker.C:
-			if err := checkConnection(resource.Host, resource.Ports, checker.Timeout); err != nil {
-				gaugeOpts.WithLabelValues(resource.Name, resource.Host).Set(0)
-			} else {
-				gaugeOpts.WithLabelValues(resource.Name, resource.Host).Set(1)
-			}
+			chckr.checkConnection(resource.Name, resource.Host, resource.Ports, chckr.Timeout)
 		}
 	}
 }
