@@ -11,25 +11,17 @@ import (
 )
 
 type Checker struct {
-	ResourceList []models.Resource
-	//Ticker       *time.Ticker
-	CheckPeriod time.Duration
-	Timeout     time.Duration
+	config      *models.Config
 	ctx         context.Context
 	cancel      context.CancelFunc
 	gaugeOpts   *prometheus.GaugeVec
 	reqDuration *prometheus.HistogramVec
+	closeFlag   chan bool
 }
 
 func NewChecker(config *models.Config) *Checker {
-	ctx, cancel := context.WithCancel(context.Background())
 	return &Checker{
-		ResourceList: config.ResourceList,
-		//Ticker:       time.NewTicker(time.Duration(config.CheckPeriodSeconds) * time.Second),
-		CheckPeriod: time.Duration(config.CheckPeriodSeconds) * time.Second,
-		Timeout:     time.Duration(config.CheckConnectionTimeout * int(time.Second)),
-		ctx:         ctx,
-		cancel:      cancel,
+		config: config,
 		gaugeOpts: promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: "monitoring",
@@ -47,27 +39,40 @@ func NewChecker(config *models.Config) *Checker {
 }
 
 func (chckr *Checker) Run() {
+	chckr.ctx, chckr.cancel = context.WithCancel(context.Background())
+	chckr.closeFlag = make(chan bool)
 	var wg sync.WaitGroup
-	for _, resource := range chckr.ResourceList {
+	for _, resource := range chckr.config.ResourceList {
 		wg.Add(1)
 		go chckr.worker(resource, &wg)
 	}
 	wg.Wait()
+	chckr.closeFlag <- true
+}
+
+func (chckr *Checker) Reloader(reload chan bool) {
+	for {
+		<-reload
+		chckr.Stop()
+		close(chckr.closeFlag)
+		chckr.Run()
+	}
 }
 
 func (chckr *Checker) Stop() {
 	chckr.cancel()
+	<-chckr.closeFlag
 }
 
 func (chckr *Checker) worker(resource models.Resource, wg *sync.WaitGroup) {
-	ticker := time.NewTicker(chckr.CheckPeriod)
+	ticker := time.NewTicker(time.Duration(chckr.config.CheckPeriodSeconds) * time.Second)
 	for {
 		select {
 		case <-chckr.ctx.Done():
 			wg.Done()
 			return
 		case <-ticker.C:
-			chckr.checkConnection(resource.Name, resource.Host, resource.Ports, chckr.Timeout)
+			chckr.checkConnection(resource.Name, resource.Host, resource.Ports, time.Duration(chckr.config.CheckConnectionTimeout)*time.Second)
 		}
 	}
 }

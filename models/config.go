@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -9,17 +10,17 @@ import (
 )
 
 type Config struct {
-	sysConfig
-	checkerConfig
+	SysConfig
+	CheckerConfig
 }
 
-type checkerConfig struct {
+type CheckerConfig struct {
 	ResourceList           []Resource `json:"resourceList"`
 	CheckPeriodSeconds     int        `json:"checkPeriodSeconds"`
 	CheckConnectionTimeout int        `json:"checkConnectionTimeout"`
 }
 
-type sysConfig struct {
+type SysConfig struct {
 	mu       sync.Mutex
 	filePath string
 }
@@ -38,21 +39,30 @@ func NewConfig(path string) *Config {
 	return &config
 }
 
-func (conf *Config) Reload(period int) {
+func (conf *Config) Reload(period int, reload chan bool) {
+	fmt.Println("Start config autoreloader")
 	ticker := time.NewTicker(time.Duration(period) * time.Second)
 	for {
 		<-ticker.C
+		//fmt.Println("Check config")
 		file, err := os.ReadFile(conf.filePath)
 		if err != nil {
 			log.Printf("Reload config failed (read file): %v", err.Error())
 		}
-		var tempConfig checkerConfig
+		var tempConfig CheckerConfig
 		err = json.Unmarshal(file, &tempConfig)
 		if err != nil {
 			log.Printf("Reload config failed (unmarshall): %v", err.Error())
 		}
+		if fmt.Sprintf("%v", conf.CheckerConfig) == fmt.Sprintf("%v", tempConfig) {
+			//fmt.Println("Check config - no changes")
+			continue
+		}
+		//fmt.Println("Check config - changed!")
 		conf.mu.Lock()
-		conf.checkerConfig = tempConfig
+		conf.CheckerConfig = tempConfig
+		reload <- true
 		conf.mu.Unlock()
+
 	}
 }

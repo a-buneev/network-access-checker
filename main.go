@@ -35,7 +35,9 @@ func main() {
 	go resourceChecker.Run()
 
 	if autoReloadConfig {
-		go conf.Reload(autoReloadConfigPeriodSeconds)
+		reload := make(chan bool)
+		go conf.Reload(autoReloadConfigPeriodSeconds, reload)
+		go resourceChecker.Reloader(reload)
 	}
 
 	srv := server.NewMetricsServer(serverPort)

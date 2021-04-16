@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,11 +13,64 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+/*
+{
+    "resourceList":[
+        {
+            "name":"Google",
+            "host":"www.google.com",
+            "ports":["443","80"]
+        },
+        {
+            "name":"Yandex",
+            "host":"www.yandex.com",
+            "ports":["443"]
+        },
+        {
+            "name":"for testing",
+            "host":"www.213y4y.com",
+            "ports":["443","80"]
+        }
+    ],
+    "checkPeriodSeconds":3,
+    "checkConnectionTimeout":2
+}
+*/
+
 func TestMain(t *testing.T) {
 	config := models.NewConfig("config.json")
+	testConfig := models.Config{
+		CheckerConfig: models.CheckerConfig{
+			ResourceList: []models.Resource{
+				{
+					Name:  "Google",
+					Host:  "www.google.com",
+					Ports: []string{"443", "80"},
+				},
+				{
+					Name:  "Yandex",
+					Host:  "www.yandex.com",
+					Ports: []string{"443"},
+				},
+				{
+					Name:  "for testing",
+					Host:  "www.213y4y.com",
+					Ports: []string{"443", "80"},
+				},
+			},
+			CheckPeriodSeconds:     3,
+			CheckConnectionTimeout: 2,
+		},
+	}
+	if fmt.Sprintf("%v", config.CheckerConfig) != fmt.Sprintf("%v", testConfig.CheckerConfig) {
+		t.Fatal("Config parse error!")
+	}
+
 	resourceChecker := checker.NewChecker(config)
 	go resourceChecker.Run()
-	go config.Reload(4)
+	reload := make(chan bool)
+	go config.Reload(4, reload)
+	go resourceChecker.Reloader(reload)
 	time.Sleep(10 * time.Second)
 	req, err := http.NewRequest("GET", "/metrics", nil)
 	if err != nil {
