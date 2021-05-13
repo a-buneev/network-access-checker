@@ -42,7 +42,9 @@ func main() {
 
 	srv := server.NewMetricsServer(serverPort)
 	fmt.Println("ListenAndServe on :" + serverPort)
-	go srv.ListenAndServe()
+	go func() {
+		log.Println(srv.ListenAndServe())
+	}()
 
 	gracefulShutdown(resourceChecker, srv)
 	fmt.Println("Success end")

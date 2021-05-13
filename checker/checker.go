@@ -2,6 +2,8 @@ package checker
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -53,9 +55,11 @@ func (chckr *Checker) Run() {
 func (chckr *Checker) Reloader(reload chan bool) {
 	for {
 		<-reload
+		fmt.Println("Start reload checker")
 		chckr.Stop()
 		close(chckr.closeFlag)
-		chckr.Run()
+		go chckr.Run()
+		fmt.Println("End reload checker")
 	}
 }
 
@@ -72,7 +76,9 @@ func (chckr *Checker) worker(resource models.Resource, wg *sync.WaitGroup) {
 			wg.Done()
 			return
 		case <-ticker.C:
-			chckr.checkConnection(resource.Name, resource.Host, resource.Ports, time.Duration(chckr.config.CheckConnectionTimeout)*time.Second)
+			if err := chckr.checkConnection(resource.Name, resource.Host, resource.Ports, time.Duration(chckr.config.CheckConnectionTimeout)*time.Second); err != nil {
+				log.Printf("Connecting error: %v, host: %v, port: %v", err.Error(), resource.Host, resource.Ports)
+			}
 		}
 	}
 }

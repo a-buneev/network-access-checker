@@ -3,8 +3,8 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
-	"os"
 	"sync"
 	"time"
 )
@@ -26,7 +26,7 @@ type SysConfig struct {
 }
 
 func NewConfig(path string) *Config {
-	file, err := os.ReadFile(path)
+	file, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +45,7 @@ func (conf *Config) Reload(period int, reload chan bool) {
 	for {
 		<-ticker.C
 		//fmt.Println("Check config")
-		file, err := os.ReadFile(conf.filePath)
+		file, err := ioutil.ReadFile(conf.filePath)
 		if err != nil {
 			log.Printf("Reload config failed (read file): %v", err.Error())
 		}
@@ -58,11 +58,10 @@ func (conf *Config) Reload(period int, reload chan bool) {
 			//fmt.Println("Check config - no changes")
 			continue
 		}
-		//fmt.Println("Check config - changed!")
+		fmt.Println("Config has changed!")
 		conf.mu.Lock()
 		conf.CheckerConfig = tempConfig
 		reload <- true
 		conf.mu.Unlock()
-
 	}
 }

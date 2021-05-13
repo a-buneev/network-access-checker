@@ -1,7 +1,6 @@
 package checker
 
 import (
-	"log"
 	"net"
 	"time"
 
@@ -14,7 +13,6 @@ func (chckr *Checker) checkConnection(name, host string, ports []string, timeout
 		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
 		if err != nil {
 			chckr.gaugeOpts.WithLabelValues(name, host, port).Set(0)
-			log.Printf("Connecting error: %v, host: %v, port: %v", err.Error(), host, port)
 			return err
 		}
 		timer.ObserveDuration()
